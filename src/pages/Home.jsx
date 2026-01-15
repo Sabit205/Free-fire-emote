@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { ref, onValue } from 'firebase/database';
-import { Send, Server, User, Gamepad2, Shield } from 'lucide-react';
+import { Send, Server, User, Gamepad2, Shield, Plus, Trash2, Palette } from 'lucide-react';
 import './Home.css';
 
 export default function Home() {
@@ -9,6 +9,7 @@ export default function Home() {
     const [emotes, setEmotes] = useState({});
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'yellow');
 
     // Filter emotes
     const filteredEmotes = activeCategory === 'All'
@@ -17,11 +18,17 @@ export default function Home() {
 
     const [formData, setFormData] = useState({
         teamCode: '',
-        uid: '',
+        uids: [''], // Array for multiple UIDs
         selectedServer: '',
         selectedEmoteId: ''
     });
     const [status, setStatus] = useState({ type: '', msg: '' });
+
+    // Apply theme
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }, [theme]);
 
     useEffect(() => {
         // Load data from Firebase
@@ -38,10 +45,30 @@ export default function Home() {
         });
     }, []);
 
+    const handleUidChange = (index, value) => {
+        const newUids = [...formData.uids];
+        newUids[index] = value;
+        setFormData({ ...formData, uids: newUids });
+    };
+
+    const addUidField = () => {
+        if (formData.uids.length < 6) {
+            setFormData({ ...formData, uids: [...formData.uids, ''] });
+        }
+    };
+
+    const removeUidField = (index) => {
+        const newUids = formData.uids.filter((_, i) => i !== index);
+        setFormData({ ...formData, uids: newUids });
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
-        // Check for required fields, including server selection
-        if (!formData.teamCode || !formData.uid || !formData.selectedEmoteId || !formData.selectedServer) {
+
+        // Validate fields
+        const validUids = formData.uids.filter(uid => uid.trim() !== '');
+
+        if (!formData.teamCode || validUids.length === 0 || !formData.selectedEmoteId || !formData.selectedServer) {
             setStatus({ type: 'error', msg: 'Please fill in all fields (Server, Emote, Team Code, UID).' });
             return;
         }
@@ -52,29 +79,58 @@ export default function Home() {
             return;
         }
 
-        setStatus({ type: 'loading', msg: 'Sending emote...' });
+        setStatus({ type: 'loading', msg: `Sending to ${validUids.length} players...` });
 
-        // Clean base URL (remove trailing slash)
         const cleanBaseUrl = selectedServerObj.baseUrl.replace(/\/$/, '');
-        // Construct the ACTUAL unsecured target URL
-        const targetUrl = `${cleanBaseUrl}/join?tc=${formData.teamCode}&uid1=${formData.uid}&emote_id=${formData.selectedEmoteId}`;
+        let successCount = 0;
 
-        // Route through our secure Vercel proxy
-        // Pass the target URL as a query parameter
-        const proxyUrl = `/api/proxy?target=${encodeURIComponent(targetUrl)}`;
+        for (const uid of validUids) {
+            // Construct the ACTUAL unsecured target URL
+            const targetUrl = `${cleanBaseUrl}/join?tc=${formData.teamCode}&uid1=${uid}&emote_id=${formData.selectedEmoteId}`;
 
-        try {
-            await fetch(proxyUrl);
-            setStatus({ type: 'success', msg: 'Emote request sent! Check game lobby.' });
-        } catch (err) {
-            console.error(err);
-            setStatus({ type: 'error', msg: 'Failed to send request.' });
+            // Route through our secure Vercel proxy
+            const proxyUrl = `/api/proxy?target=${encodeURIComponent(targetUrl)}`;
+
+            try {
+                await fetch(proxyUrl);
+                successCount++;
+            } catch (err) {
+                console.error(`Failed for UID ${uid}:`, err);
+            }
+        }
+
+        if (successCount === validUids.length) {
+            setStatus({ type: 'success', msg: 'All emotes sent successfully!' });
+        } else if (successCount > 0) {
+            setStatus({ type: 'warning', msg: `Sent to ${successCount}/${validUids.length} players.` });
+        } else {
+            setStatus({ type: 'error', msg: 'Failed to send requests.' });
         }
     };
 
     return (
         <div className="home-container">
             <div className="glass-overlay"></div>
+
+            {/* Theme Switcher */}
+            <button
+                onClick={() => setTheme(theme === 'yellow' ? 'green' : 'yellow')}
+                style={{
+                    position: 'absolute',
+                    top: '20px',
+                    right: '20px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    zIndex: 100,
+                    cursor: 'pointer'
+                }}
+                title="Toggle Theme"
+            >
+                <Palette size={20} color={theme === 'yellow' ? '#fbbf24' : '#38ff79'} />
+            </button>
 
             {/* Hero Section */}
             <div className="hero-section fade-in">
@@ -103,15 +159,36 @@ export default function Home() {
                     </div>
 
                     <div className="input-group">
-                        <label>PLAYER UID</label>
-                        <div className="input-wrapper">
-                            <Shield size={18} />
-                            <input
-                                type="text"
-                                placeholder="Ex: 888999000"
-                                value={formData.uid}
-                                onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
-                            />
+                        <label>PLAYER UIDS <span style={{ fontSize: '0.7em', opacity: 0.7 }}>(Max 6)</span></label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {formData.uids.map((uid, index) => (
+                                <div key={index} className="input-wrapper">
+                                    <Shield size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder={`UID ${index + 1}`}
+                                        value={uid}
+                                        onChange={(e) => handleUidChange(index, e.target.value)}
+                                    />
+                                    {formData.uids.length > 1 && (
+                                        <button
+                                            onClick={() => removeUidField(index)}
+                                            style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: '0 8px' }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            {formData.uids.length < 6 && (
+                                <button
+                                    onClick={addUidField}
+                                    className="btn-secondary"
+                                    style={{ width: '100%', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.8rem' }}
+                                >
+                                    <Plus size={14} /> Add Another UID
+                                </button>
+                            )}
                         </div>
                     </div>
 

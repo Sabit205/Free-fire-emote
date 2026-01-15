@@ -26,6 +26,12 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
+  // Global Theme Initialization
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'yellow';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

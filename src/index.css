@@ -19,6 +19,15 @@
   /* Zinc 700 */
   --radius: 0.5rem;
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* RGB values for rgba usage */
+  --primary-rgb: 251, 191, 36;
+}
+
+[data-theme="green"] {
+  --primary: #38ff79;
+  --primary-hover: #2ee66d;
+  --primary-rgb: 56, 255, 121;
 }
 
 body {
