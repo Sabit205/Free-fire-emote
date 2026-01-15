@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { useEffect, useState } from 'react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Analytics } from '@vercel/analytics/react';
 
 function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -26,20 +27,23 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+      <Analytics />
+    </>
   );
 }
 
