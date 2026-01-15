@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { useEffect, useState } from 'react';
 import { auth } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Analytics } from "@vercel/analytics/react";
 
 function ProtectedRoute({ children }) {
   const [user, setUser] = useState(null);
@@ -39,6 +40,7 @@ function App() {
           }
         />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   );
 }
