@@ -56,12 +56,15 @@ export default function Home() {
 
         // Clean base URL (remove trailing slash)
         const cleanBaseUrl = selectedServerObj.baseUrl.replace(/\/$/, '');
-        // Construct API URL
-        const url = `${cleanBaseUrl}/join?tc=${formData.teamCode}&uid1=${formData.uid}&emote_id=${formData.selectedEmoteId}`;
+        // Construct the ACTUAL unsecured target URL
+        const targetUrl = `${cleanBaseUrl}/join?tc=${formData.teamCode}&uid1=${formData.uid}&emote_id=${formData.selectedEmoteId}`;
+
+        // Route through our secure Vercel proxy
+        // Pass the target URL as a query parameter
+        const proxyUrl = `/api/proxy?target=${encodeURIComponent(targetUrl)}`;
 
         try {
-            // mode: 'no-cors' is necessary if the target server doesn't support CORS for client-side calls
-            await fetch(url, { mode: 'no-cors' });
+            await fetch(proxyUrl);
             setStatus({ type: 'success', msg: 'Emote request sent! Check game lobby.' });
         } catch (err) {
             console.error(err);
